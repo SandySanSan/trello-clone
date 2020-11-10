@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { nanoid } from 'nanoid';
 import { findItemIndexById } from './utils/findItemIndexById';
-
+import { moveItem } from './moveItem';
+import { DragItem } from './DragItem';
 interface Task {
   id: string;
   text: string;
@@ -20,7 +21,9 @@ interface AppStateContextProps {
 
 export interface AppState {
   lists: List[];
+  draggedItem?: DragItem | undefined;
 }
+
 type Action =
   | {
     type: "ADD_LIST";
@@ -30,6 +33,17 @@ type Action =
   | {
     type: "ADD_TASK";
     payload: { text: string; listId: string; };
+  }
+  | {
+    type: "MOVE_LIST";
+    payload: {
+      dragIndex: number;
+      hoverIndex: number;
+    };
+  }
+  | {
+    type: "SET_DRAGGED_ITEM";
+    payload: DragItem | undefined;
   };
 
 const appData: AppState = {
@@ -81,14 +95,22 @@ const appStateReducer = (state: AppState, action: Action): AppState => {
       };
     }
     case "ADD_TASK": {
-      const targetLaneIndex = findItemIndexById(state.lists, action.payload.listId)
+      const targetLaneIndex = findItemIndexById(state.lists, action.payload.listId);
       state.lists[targetLaneIndex].tasks.push({
         id: nanoid(),
         text: action.payload.text
-      })
+      });
       return {
         ...state
       };
+    }
+    case "MOVE_LIST": {
+      const { dragIndex, hoverIndex } = action.payload;
+      state.lists = moveItem(state.lists, dragIndex, hoverIndex);
+      return { ...state };
+    }
+    case "SET_DRAGGED_ITEM": {
+      return { ...state, draggedItem: action.payload };
     }
     default: {
       return state;
