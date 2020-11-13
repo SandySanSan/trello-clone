@@ -20,22 +20,35 @@ export const Column = ({ text, index, id, isPreview }: ColumnsProps) => {
   const { state, dispatch } = useAppState();
   const ref = useRef<HTMLDivElement>(null);
   const [, drop] = useDrop({
-    accept: "COLUMN",
+    accept: ["COLUMN", "CARD"],
     // The hover callback is triggered whenever you move the dragged item above the drop target.
     hover(item: DragItem) {
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      if (dragIndex === hoverIndex) {
-        return;
+      if (item.type === "COLUMN") {
+        const dragIndex = item.index;
+        const hoverIndex = index;
+        if (dragIndex === hoverIndex) {
+          return;
+        }
+        dispatch({ type: "MOVE_LIST", payload: { dragIndex, hoverIndex } });
+        item.index = hoverIndex;
       }
-
-      dispatch({ type: "MOVE_LIST", payload: { dragIndex, hoverIndex } });
-      item.index = hoverIndex;
+      else {
+        const dragIndex = item.index;
+        const hoverIndex = 0;
+        const sourceColumn = item.columnId;
+        const targetColumn = id;
+        if (sourceColumn === targetColumn) {
+          return;
+        }
+        dispatch({
+          type: "MOVE_TASK",
+          payload: { dragIndex, hoverIndex, sourceColumn, targetColumn }
+        });
+        item.index = hoverIndex;
+        item.columnId = targetColumn;
+      }
     }
   });
-
-
   const { drag } = useItemDrag({ type: "COLUMN", id, index, text });
   drag(drop(ref));
 
@@ -47,9 +60,14 @@ export const Column = ({ text, index, id, isPreview }: ColumnsProps) => {
       <ColumnTitle>
         {text}
       </ColumnTitle>
-      {state.lists[index].tasks.map((task,i) => (
-        <Card text={task.text} key={task.id} index={i}/>
-      ))}
+      {state.lists[index].tasks.map((task, i) => (
+          <Card
+            id={task.id}
+            columnId={id}
+            text={task.text}
+            key={task.id}
+            index={i} />
+        ))}
       <AddNewItem
         dark
         toggleButtonText="+ Add another task"
@@ -57,7 +75,7 @@ export const Column = ({ text, index, id, isPreview }: ColumnsProps) => {
           type: "ADD_TASK",
           payload: { text, listId: id }
         })} />
-    </ColumnContainer>
+    </ColumnContainer >
   );
 };
 
