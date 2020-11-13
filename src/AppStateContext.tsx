@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import { findItemIndexById } from './utils/findItemIndexById';
 import { moveItem } from './moveItem';
 import { DragItem } from './DragItem';
+import { save } from './api';
+import {withData} from "./withData"
+
 interface Task {
   id: string;
   text: string;
@@ -55,26 +58,26 @@ type Action =
     payload: DragItem | undefined;
   };
 
-const appData: AppState = {
-  lists: [
-    {
-      id: "0",
-      text: "TO DO",
-      tasks: [{ id: "c0", text: "Generate app scaffold" }]
-    },
-    {
-      id: "1",
-      text: "In Progress",
-      tasks: [{ id: "c1", text: "Learn Typescript" }]
-    },
-    {
-      id: "2",
-      text: "Done",
-      tasks: [{ id: "c2", text: "Begin to use static typing" }]
-    }
+// const appData: AppState = {
+//   lists: [
+//     {
+//       id: "0",
+//       text: "TO DO",
+//       tasks: [{ id: "c0", text: "Generate app scaffold" }]
+//     },
+//     {
+//       id: "1",
+//       text: "In Progress",
+//       tasks: [{ id: "c1", text: "Learn Typescript" }]
+//     },
+//     {
+//       id: "2",
+//       text: "Done",
+//       tasks: [{ id: "c2", text: "Begin to use static typing" }]
+//     }
 
-  ]
-};
+//   ]
+// };
 
 // Define data structure for the application
 const AppStateContext = createContext<AppStateContextProps>({} as AppStateContextProps);
@@ -83,14 +86,19 @@ export const useAppState = () => {
   return useContext(AppStateContext);
 };
 
-export const AppStateProvider = ({ children }: React.PropsWithChildren<{}>) => {
-  const [state, dispatch] = useReducer(appStateReducer, appData);
+export const AppStateProvider = withData(({ children, initialState }: React.PropsWithChildren<{initialState : AppState}>) => {
+  const [state, dispatch] = useReducer(appStateReducer, initialState);
+
+  useEffect(() => {
+    save(state);
+  }, [state]);
+
   return (
     <AppStateContext.Provider value={{ state, dispatch }}>
       {children}
     </AppStateContext.Provider>
   );
-};
+});
 
 const appStateReducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
@@ -122,7 +130,7 @@ const appStateReducer = (state: AppState, action: Action): AppState => {
       const { dragIndex, hoverIndex, sourceColumn, targetColumn } = action.payload;
       const sourceLaneIndex = findItemIndexById(state.lists, sourceColumn);
       const targetLaneIndex = findItemIndexById(state.lists, targetColumn);
-      
+
       //  remove the card from the source column and add it to the target column.
       const item = state.lists[sourceLaneIndex].tasks.splice(dragIndex, 1)[0];
       state.lists[targetLaneIndex].tasks.splice(hoverIndex, 0, item);
